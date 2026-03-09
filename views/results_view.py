@@ -372,6 +372,30 @@ class ResultsView(ctk.CTkFrame):
             width="100%", thickness=1, color=colors.lightgrey, spaceAfter=8
         ))
 
+        # ---- Zellen-Styles (Paragraph-Wrapping) ----
+        hdr_style = ParagraphStyle(
+            "tbl_hdr", parent=styles["Normal"],
+            fontSize=9, fontName="Helvetica-Bold",
+            textColor=colors.white, leading=12,
+        )
+        cell_style = ParagraphStyle(
+            "tbl_cell", parent=styles["Normal"],
+            fontSize=9, leading=12,
+        )
+        cell_bold = ParagraphStyle(
+            "tbl_bold", parent=styles["Normal"],
+            fontSize=9, fontName="Helvetica-Bold", leading=12,
+        )
+        cell_ctr = ParagraphStyle(
+            "tbl_ctr", parent=styles["Normal"],
+            fontSize=9, leading=12, alignment=1,  # 1 = CENTER
+        )
+        cell_ctr_white = ParagraphStyle(
+            "tbl_ctr_white", parent=styles["Normal"],
+            fontSize=9, leading=12, alignment=1,
+            textColor=colors.white, fontName="Helvetica-Bold",
+        )
+
         # ---- Ergebnistabelle ----
         story.append(Paragraph("Ergebnisse nach Subskala", h2_style))
 
@@ -380,33 +404,44 @@ class ResultsView(ctk.CTkFrame):
             "grenzwertig":  colors.HexColor("#f39c12"),
             "auffaellig":   colors.HexColor("#e74c3c"),
         }
-        tdata = [["Bereich", "Rohwert", "Max.", "Bewertung"]]
+
+        def P(text, st=cell_style):
+            return Paragraph(str(text), st)
+
+        tdata = [[P("Bereich", hdr_style), P("Rohwert", hdr_style),
+                  P("Max.", hdr_style),    P("Bewertung", hdr_style)]]
         for r in self._current_results:
-            tdata.append([r.name, str(r.raw_score), str(r.max_score), r.classification_label])
+            tdata.append([
+                P(r.name),
+                P(str(r.raw_score), cell_ctr),
+                P(str(r.max_score), cell_ctr),
+                P(r.classification_label, cell_ctr),
+            ])
         total     = sum(r.raw_score for r in self._current_results)
         total_max = sum(r.max_score for r in self._current_results)
-        tdata.append(["Gesamtsumme", str(total), str(total_max), ""])
+        tdata.append([P("Gesamtsumme", cell_bold),
+                      P(str(total), cell_ctr),
+                      P(str(total_max), cell_ctr),
+                      P("", cell_ctr)])
 
         col_widths = [9*cm, 2*cm, 2*cm, 3.5*cm]
         t = Table(tdata, colWidths=col_widths, repeatRows=1)
         ts = TableStyle([
             ("BACKGROUND",    (0, 0), (-1, 0),   colors.HexColor("#2c3e50")),
-            ("TEXTCOLOR",     (0, 0), (-1, 0),   colors.white),
-            ("FONTNAME",      (0, 0), (-1, 0),   "Helvetica-Bold"),
-            ("FONTSIZE",      (0, 0), (-1, -1),  9),
             ("ROWBACKGROUNDS",(0, 1), (-1, -2),  [colors.HexColor("#f9f9f9"), colors.white]),
             ("BACKGROUND",    (0, -1),(-1, -1),  colors.HexColor("#ecf0f1")),
-            ("FONTNAME",      (0, -1),(-1, -1),  "Helvetica-Bold"),
-            ("ALIGN",         (1, 0), (2, -1),   "CENTER"),
-            ("ALIGN",         (3, 1), (3, -2),   "CENTER"),
             ("GRID",          (0, 0), (-1, -1),  0.4, colors.lightgrey),
-            ("TOPPADDING",    (0, 0), (-1, -1),  4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1),  4),
+            ("VALIGN",        (0, 0), (-1, -1),  "MIDDLE"),
+            ("TOPPADDING",    (0, 0), (-1, -1),  5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1),  5),
+            ("LEFTPADDING",   (0, 0), (-1, -1),  6),
+            ("RIGHTPADDING",  (0, 0), (-1, -1),  6),
         ])
         for i, r in enumerate(self._current_results, start=1):
             c = CLASS_COLORS[r.classification_key]
             ts.add("BACKGROUND", (3, i), (3, i), c)
-            ts.add("TEXTCOLOR",  (3, i), (3, i), colors.white)
+            # weißer Text in der Badge-Zelle → neuen Paragraph ersetzen
+            tdata[i][3] = Paragraph(r.classification_label, cell_ctr_white)
         t.setStyle(ts)
         story.append(t)
 
@@ -422,29 +457,43 @@ class ResultsView(ctk.CTkFrame):
             ))
             story.append(Paragraph("Fragebogen – Einzelantworten", h2_style))
 
-            q_tdata = [["Nr.", "Frage", "Antwort"]]
+            q_hdr_s = ParagraphStyle(
+                "q_hdr", parent=styles["Normal"],
+                fontSize=8, fontName="Helvetica-Bold",
+                textColor=colors.white, leading=11,
+            )
+            q_cell = ParagraphStyle(
+                "q_cell", parent=styles["Normal"],
+                fontSize=8, leading=11,
+            )
+            q_ctr = ParagraphStyle(
+                "q_ctr", parent=styles["Normal"],
+                fontSize=8, leading=11, alignment=1,
+            )
+
+            q_tdata = [[Paragraph("Nr.", q_hdr_s),
+                        Paragraph("Frage", q_hdr_s),
+                        Paragraph("Antwort", q_hdr_s)]]
             for qid in range(1, 34):
                 q_text       = questions.get(str(qid), f"Frage {qid}")
                 answer_index = self._current_answers.get(qid, -1)
-                if 0 <= answer_index < len(labels):
-                    answer_text = labels[answer_index]
-                else:
-                    answer_text = "–"
-                q_tdata.append([str(qid), q_text, answer_text])
+                answer_text  = labels[answer_index] if 0 <= answer_index < len(labels) else "–"
+                q_tdata.append([
+                    Paragraph(str(qid), q_ctr),
+                    Paragraph(q_text,   q_cell),
+                    Paragraph(answer_text, q_ctr),
+                ])
 
             qt = Table(q_tdata, colWidths=[1*cm, 13*cm, 2.5*cm], repeatRows=1)
             qt.setStyle(TableStyle([
                 ("BACKGROUND",    (0, 0), (-1, 0),   colors.HexColor("#2c3e50")),
-                ("TEXTCOLOR",     (0, 0), (-1, 0),   colors.white),
-                ("FONTNAME",      (0, 0), (-1, 0),   "Helvetica-Bold"),
-                ("FONTSIZE",      (0, 0), (-1, -1),  8),
                 ("ROWBACKGROUNDS",(0, 1), (-1, -1),  [colors.HexColor("#f9f9f9"), colors.white]),
                 ("GRID",          (0, 0), (-1, -1),  0.4, colors.lightgrey),
-                ("ALIGN",         (0, 0), (0, -1),   "CENTER"),
-                ("ALIGN",         (2, 0), (2, -1),   "CENTER"),
                 ("VALIGN",        (0, 0), (-1, -1),  "MIDDLE"),
-                ("TOPPADDING",    (0, 0), (-1, -1),  3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1),  3),
+                ("TOPPADDING",    (0, 0), (-1, -1),  4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1),  4),
+                ("LEFTPADDING",   (0, 0), (-1, -1),  5),
+                ("RIGHTPADDING",  (0, 0), (-1, -1),  5),
             ]))
             story.append(qt)
 
