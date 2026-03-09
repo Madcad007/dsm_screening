@@ -1,0 +1,33 @@
+# --- Sensible Konfigurationsdaten ---
+# config.json enthält Admin-Passwort-Hash und Ablaufdatum
+# und darf NICHT in das Repository hochgeladen werden.
+# Als Vorlage dient config.example.json (ohne sensible Werte).
+config.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# --- Virtuelle Umgebungen ---
+.venv/
+venv/
+env/
+.env
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Betriebssystem ---
+Thumbs.db
+Desktop.ini
+.DS_Store

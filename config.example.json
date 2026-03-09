@@ -1,0 +1,105 @@
+{
+  "admin_password_hash": "",
+  "answer_labels": [
+    "gar nicht",
+    "kaum",
+    "manchmal",
+    "häufig"
+  ],
+  "answer_values": [
+    0,
+    0,
+    1,
+    2
+  ],
+  "question_answer_values": {},
+  "questionnaire_instruction": "Bitte kreuzen Sie für jede Aussage an, wie häufig das beschriebene Verhalten auf die beurteilte Person zutrifft.",
+  "expiry_date": "",
+  "questions": {
+    "1": "Frage 1: [kann nicht ruhig bleiben und bewegt ständig die Hände oder Füße oder rutscht auf dem Stuhl herum]",
+    "2": "Frage 2: [platzt häufig mit Antworten heraus, bevor die Frage zu Ende gestellt ist]",
+    "3": "Frage 3: [fürchtet sich leicht und/oder hat viele Ängste]",
+    "4": "Frage 4: [hat einen hohen Rededrang]",
+    "5": "Frage 5: [ist aufbrausend, hat öfter Wutanfälle]",
+    "6": "Frage 6: [wirkt häufig traurig und bedrückt, hat viele Sorgen]",
+    "7": "Frage 7: [steht in den Situationen häufig auf, in denen Sitzen bleiben erwartet wird]",
+    "8": "Frage 8: [durch andere Kinder öfter gehänselt und oder schikaniert]",
+    "9": "Frage 9: [weint häufig und /oder ist niedergeschlagen und oder ist unglücklich]",
+    "10": "Frage 10: [führt häufig Anweisungen nicht vollständig aus]",
+    "11": "Frage 11: [sucht Kontakt eher zu Erwachsenen, als zu Kindern]",
+    "12": "Frage 12: [lässt sich öfter durch äußere Reize leicht ablenken]",
+    "13": "Frage 13: [kann nur schwer warten, bis er sie an der Reihe ist]",
+    "14": "Frage 14: [klaut Dinge in der Schule oder zu Hause Freizeit]",
+    "15": "Frage 15: [ist in der Regel gehorsam und macht, was die Erwachsenen sagen]",
+    "16": "Frage 16: [ist in der Regel gehorsam und macht, was die Erwachsenen sagen]",
+    "17": "Frage 17: [flunkert und mogelt häufig]",
+    "18": "Frage 18: [spielt oft alleine, ist Einzelgänger]",
+    "19": "Frage 19: [unterbricht und oder stört Andere häufig]",
+    "20": "Frage 20: [hat eine Abneigung gegen Aufgaben, die länger andauernde geistige Anstrengungen erfordern]",
+    "21": "Frage 21: [hat häufig Schwierigkeiten, ruhig zu spielen oder sich mit Freizeitaktivitäten ruhig zu beschäftigen]",
+    "22": "Frage 22: [ist im allgemeinen beliebt]",
+    "23": "Frage 23: [ist häufig rastlos oder handelt oftmals, als wäre er sie ,getrieben']",
+    "24": "Frage 24: [Unbekannte neue Situationen verursachen Unsicherheit, Nervosität]",
+    "25": "Frage 25: [hat oft Schwierigkeiten, längere Zeit die Aufmerksamkeit aufrecht zu erhalten]",
+    "26": "Frage 26: [ist bei Alltagstätigkeiten häufig vergesslich]",
+    "27": "Frage 27: [hat zumindest eine gute Freundin, einen guten Freund]",
+    "28": "Frage 28: [hat häufig Schwierigkeiten, Aufgaben und Aktivitäten zu organisieren]",
+    "29": "Frage 29: [gibt häufig somatische Beschwerden an (Übelkeit, Bauchschmerzen, Kopfschmerzen)]",
+    "30": "Frage 30: [läuft häufig herum oder klettert exzessiv in Situationen, in denen dies unpassend ist]",
+    "31": "Frage 31: [verliert häufig Gegenstände die er / sie für Aufgaben oder Aktivitäten benötigt]",
+    "32": "Frage 32: [scheint häufig nicht zuzuhören, wenn er sie angesprochen wird]",
+    "33": "Frage 33: [beachtet häufig Einzelheiten nicht und oder macht Flüchtigkeitsfehler]"
+  },
+  "subscales": {
+    "Emotionale Probleme": {
+      "items": [3, 6, 21, 24, 29],
+      "thresholds": {
+        "Mutter":   {"grenzwertig": 6, "auffaellig": 8},
+        "Vater":    {"grenzwertig": 6, "auffaellig": 8},
+        "Lehrer":   {"grenzwertig": 5, "auffaellig": 6},
+        "Selbst":   {"grenzwertig": 6, "auffaellig": 8},
+        "Sonstige": {"grenzwertig": 6, "auffaellig": 8}
+      }
+    },
+    "Verhaltensprobleme": {
+      "items": [5, 14, 15, 16, 17, 28],
+      "thresholds": {
+        "Mutter":   {"grenzwertig": 6, "auffaellig": 8},
+        "Vater":    {"grenzwertig": 6, "auffaellig": 8},
+        "Lehrer":   {"grenzwertig": 6, "auffaellig": 8},
+        "Selbst":   {"grenzwertig": 6, "auffaellig": 8},
+        "Sonstige": {"grenzwertig": 6, "auffaellig": 8}
+      }
+    },
+    "Verhaltensprobleme in Peergroup": {
+      "items": [8, 9, 18, 22, 27],
+      "thresholds": {
+        "Mutter":   {"grenzwertig": 4, "auffaellig": 6},
+        "Vater":    {"grenzwertig": 4, "auffaellig": 6},
+        "Lehrer":   {"grenzwertig": 4, "auffaellig": 6},
+        "Selbst":   {"grenzwertig": 4, "auffaellig": 6},
+        "Sonstige": {"grenzwertig": 4, "auffaellig": 6}
+      }
+    },
+    "Hyperaktivität & Impulsivität": {
+      "items": [1, 2, 4, 7, 10, 13, 19, 23, 30],
+      "thresholds": {
+        "Mutter":   {"grenzwertig": 4, "auffaellig": 6},
+        "Vater":    {"grenzwertig": 4, "auffaellig": 6},
+        "Lehrer":   {"grenzwertig": 4, "auffaellig": 6},
+        "Selbst":   {"grenzwertig": 4, "auffaellig": 6},
+        "Sonstige": {"grenzwertig": 4, "auffaellig": 6}
+      }
+    },
+    "Aufmerksamkeit- und Konzentrationsstörung": {
+      "items": [11, 12, 20, 25, 26, 31, 32, 33],
+      "thresholds": {
+        "Mutter":   {"grenzwertig": 4, "auffaellig": 6},
+        "Vater":    {"grenzwertig": 4, "auffaellig": 6},
+        "Lehrer":   {"grenzwertig": 4, "auffaellig": 6},
+        "Selbst":   {"grenzwertig": 4, "auffaellig": 6},
+        "Sonstige": {"grenzwertig": 4, "auffaellig": 6}
+      }
+    }
+  }
+}
