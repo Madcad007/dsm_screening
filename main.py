@@ -31,6 +31,7 @@ class App(ctk.CTk):
         self._cfg.load()
 
         self._respondent: str = ""
+        self._child_info: dict = {}
         self._current_view = None
         self._admin_window = None
         self._appearance_mode = "light"
@@ -237,9 +238,10 @@ class App(ctk.CTk):
     # Callbacks der Views
     # ------------------------------------------------------------------ #
 
-    def _on_start(self, respondent: str):
+    def _on_start(self, respondent: str, child_info: dict | None = None):
         """Start-View → Fragebogen"""
         self._respondent = respondent
+        self._child_info = child_info or {}
         self._questionnaire_view.reload()
         self._show_view(self._questionnaire_view)
 
@@ -253,6 +255,7 @@ class App(ctk.CTk):
             respondent=self._respondent,
             results=results,
             answers=answers,
+            child_info=self._child_info,
         )
         self._show_view(self._results_view)
 

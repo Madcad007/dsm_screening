@@ -172,13 +172,15 @@ class ResultsView(ctk.CTkFrame):
         respondent: str,
         results: list[SubscaleResult],
         answers: dict | None = None,
+        child_info: dict | None = None,
     ):
         """Füllt die Tabelle und die Zusammenfassung."""
         self._respondent_label.configure(text=f"Auswerter: {respondent}")
-        self._current_summary  = build_summary_text(respondent, results)
+        self._current_summary    = build_summary_text(respondent, results)
         self._current_respondent = respondent
-        self._current_results  = results
-        self._current_answers  = answers or {}
+        self._current_results    = results
+        self._current_answers    = answers or {}
+        self._child_info         = child_info or {}
 
         # --- Tabelle befüllen ---
         for widget in self._scroll.winfo_children():
@@ -286,19 +288,49 @@ class ResultsView(ctk.CTkFrame):
 
     # ------------------------------------------------------------------ #
 
+    @staticmethod
+    def _safe(text: str) -> str:
+        """Entfernt Zeichen, die in Dateinamen unzulässig sind."""
+        for ch in r'\/:*?"<>|':
+            text = text.replace(ch, "")
+        return text.strip()
+
+    def _build_pdf_filename(self) -> str:
+        """Erstellt den Dateinamen im Format DSM_Nachname_Vorname_geb_TT-MM-JJ_datum-TT-MM-JJJJ."""
+        ci = getattr(self, "_child_info", {})
+        nachname = self._safe(ci.get("nachname", "Unbekannt"))
+        vorname  = self._safe(ci.get("vorname",  "Unbekannt"))
+
+        # Geburtsdatum TT.MM.JJJJ → TT-MM-JJ (2-stelliges Jahr)
+        geb_raw = ci.get("geburtsdatum", "")
+        try:
+            geb_dt = datetime.datetime.strptime(geb_raw, "%d.%m.%Y")
+            geb_str = geb_dt.strftime("%d-%m-%y")
+        except ValueError:
+            geb_str = self._safe(geb_raw) or "unbekannt"
+
+        # Datum der Angabe TT.MM.JJJJ → TT-MM-JJJJ
+        dat_raw = ci.get("assessment_date", "")
+        try:
+            dat_dt = datetime.datetime.strptime(dat_raw, "%d.%m.%Y")
+            dat_str = dat_dt.strftime("%d-%m-%Y")
+        except ValueError:
+            dat_str = self._safe(dat_raw) or datetime.date.today().strftime("%d-%m-%Y")
+
+        return f"DSM_{nachname}_{vorname}_geb_{geb_str}_datum-{dat_str}.pdf"
+
     def _save_pdf(self):
         """Erstellt eine PDF-Datei mit Ergebnissen und Fragebogen-Antworten."""
         path = fd.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF-Datei", "*.pdf")],
             title="PDF speichern unter…",
-            initialfile=(
-                f"DSM_Auswertung_{self._current_respondent}_{datetime.date.today()}.pdf"
-            ),
+            initialfile=self._build_pdf_filename(),
         )
         if not path:
             return
 
+        ci = getattr(self, "_child_info", {})
         cfg         = ConfigManager()
         questions   = cfg.get_questions()
         labels      = cfg.get_answer_labels()
@@ -324,10 +356,16 @@ class ResultsView(ctk.CTkFrame):
         story = []
 
         # ---- Kopf ----
+        nachname = ci.get("nachname", "")
+        vorname  = ci.get("vorname",  "")
+        geb      = ci.get("geburtsdatum", "")
+        adat     = ci.get("assessment_date", datetime.date.today().strftime("%d.%m.%Y"))
+        kind_str = f"{nachname}, {vorname}" if nachname or vorname else "–"
+
         story.append(Paragraph("DSM-Screening – Auswertungsbericht", title_style))
         story.append(Paragraph(
-            f"Auswerter: {self._current_respondent} "
-            f"• Datum: {datetime.date.today().strftime('%d.%m.%Y')}",
+            f"Kind: {kind_str} • Geburtsdatum: {geb or '–'} • "
+            f"Auswerter: {self._current_respondent} • Datum der Angabe: {adat}",
             sub_style,
         ))
         story.append(HRFlowable(
