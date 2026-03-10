@@ -4,6 +4,8 @@ Admin-Bereich: Passwortgeschützte Einstellungen.
 Tabs: Fragetexte | Antwortoptionen | Schwellenwerte | Passwort ändern
 """
 
+import tkinter.colorchooser as _colorchooser
+
 import customtkinter as ctk
 from core.config_manager import ConfigManager, RESPONDENT_KEYS
 
@@ -95,6 +97,10 @@ class AdminView(ctk.CTkToplevel):
         ]:
             self._tabview.add(tab_name)
 
+        # Subskalen-Farben (vor den Tabs laden, da Fragetexte-Tab sie benötigt)
+        self._subscale_colors: dict[str, str] = dict(self._cfg.get_subscale_colors())
+        self._color_buttons: dict[str, ctk.CTkButton] = {}
+
         self._build_questions_tab()
         self._build_answers_tab()
         self._build_thresholds_tab()
@@ -159,6 +165,7 @@ class AdminView(ctk.CTkToplevel):
         self._question_entries: dict[int, ctk.CTkEntry] = {}
         self._question_category_vars: dict[int, ctk.StringVar] = {}
         self._question_value_entries: dict[int, list[ctk.CTkEntry]] = {}
+        self._question_optionmenus: dict[int, ctk.CTkOptionMenu] = {}
 
         # --- Kopfzeile ---
         for ci, hl in enumerate(["Frage", "Fragetext", "Kategorie", "W1", "W2", "W3", "W4"]):
@@ -189,14 +196,18 @@ class AdminView(ctk.CTkToplevel):
             cur_cat = qid_to_subscale.get(qid, "– Keine –")
             cat_var = ctk.StringVar(value=cur_cat)
             self._question_category_vars[qid] = cat_var
-            ctk.CTkOptionMenu(
+            om = ctk.CTkOptionMenu(
                 scroll,
                 variable=cat_var,
                 values=category_options,
                 width=175,
                 font=ctk.CTkFont(size=11),
                 dynamic_resizing=False,
-            ).grid(row=i, column=2, padx=(0, 6), pady=3, sticky="w")
+                command=lambda v, q=qid: self._on_category_change(q, v),
+            )
+            om.grid(row=i, column=2, padx=(0, 6), pady=3, sticky="w")
+            self._question_optionmenus[qid] = om
+            self._apply_dropdown_color(qid, cur_cat)
 
             # Per-Frage-Antwortwerte
             cur_vals = q_answer_vals.get(str(qid), global_vals)
@@ -300,8 +311,11 @@ class AdminView(ctk.CTkToplevel):
             grid, text="Grenzwertig ab", font=ctk.CTkFont(size=12, weight="bold")
         ).grid(row=0, column=1, padx=12, pady=4)
         ctk.CTkLabel(
-            grid, text="Auff\u00e4llig ab", font=ctk.CTkFont(size=12, weight="bold")
+            grid, text="Auffällig ab", font=ctk.CTkFont(size=12, weight="bold")
         ).grid(row=0, column=2, padx=12, pady=4)
+        ctk.CTkLabel(
+            grid, text="Farbe", font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=0, column=3, padx=12, pady=4)
 
         self._threshold_entries: dict[str, dict[str, ctk.CTkEntry]] = {}
 
@@ -324,6 +338,22 @@ class AdminView(ctk.CTkToplevel):
                 "grenzwertig": gz_entry,
                 "auffaellig": af_entry,
             }
+
+            color = self._subscale_colors.get(name, "#9e9e9e")
+            tc = self._contrast_color(color)
+            color_btn = ctk.CTkButton(
+                grid,
+                text=" ",
+                width=80,
+                height=28,
+                fg_color=color,
+                hover_color=color,
+                text_color=tc,
+                font=ctk.CTkFont(size=11),
+                command=lambda n=name: self._pick_subscale_color(n),
+            )
+            color_btn.grid(row=row_idx, column=3, padx=12, pady=6)
+            self._color_buttons[name] = color_btn
 
         # ---------- In-Memory-Datenpuffer für alle Auswerter ----------
         # {respondent: {subscale: {key: int}}}
@@ -487,6 +517,11 @@ class AdminView(ctk.CTkToplevel):
                 for resp in RESPONDENT_KEYS
             }
 
+        # -- Subskalen-Farben --
+        for name, color in self._subscale_colors.items():
+            if name in self._cfg.config["subscales"]:
+                self._cfg.config["subscales"][name]["color"] = color
+
         self._cfg.save()
         self._show_save_toast()
 
@@ -535,6 +570,54 @@ class AdminView(ctk.CTkToplevel):
         self._old_pw.delete(0, "end")
         self._new_pw1.delete(0, "end")
         self._new_pw2.delete(0, "end")
+
+    # ------------------------------------------------------------------ #
+
+    # ------------------------------------------------------------------ #
+    # Hilfs-Methoden für Kategoriefarben
+    # ------------------------------------------------------------------ #
+
+    def _contrast_color(self, hex_color: str) -> str:
+        """Gibt dunklen oder hellen Textfarbe zurück, je nach Hintergrundluminanz."""
+        h = hex_color.lstrip("#")
+        if len(h) != 6:
+            return "#1a1a1a"
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        return "#1a1a1a" if luminance > 0.5 else "#ffffff"
+
+    def _apply_dropdown_color(self, qid: int, category: str):
+        """Färbt das Kategorie-OptionMenu für qid passend zur Kategorie ein."""
+        om = self._question_optionmenus.get(qid)
+        if om is None:
+            return
+        color = "#9e9e9e" if category == "– Keine –" else self._subscale_colors.get(category, "#9e9e9e")
+        tc = self._contrast_color(color)
+        om.configure(fg_color=color, button_color=color, text_color=tc)
+
+    def _on_category_change(self, qid: int, value: str):
+        """Callback wenn der Nutzer eine andere Kategorie auswählt."""
+        self._apply_dropdown_color(qid, value)
+
+    def _pick_subscale_color(self, subscale_name: str):
+        """Betriebssystem-Farbwahldialog für eine Subskala."""
+        current = self._subscale_colors.get(subscale_name, "#aaaaaa")
+        result = _colorchooser.askcolor(
+            color=current,
+            title=f"Farbe für „{subscale_name}“",
+            parent=self,
+        )
+        if result and result[1]:
+            hex_color = result[1]
+            self._subscale_colors[subscale_name] = hex_color
+            tc = self._contrast_color(hex_color)
+            btn = self._color_buttons.get(subscale_name)
+            if btn:
+                btn.configure(fg_color=hex_color, hover_color=hex_color, text_color=tc)
+            # Alle Dropdowns mit dieser Subskala sofort aktualisieren
+            for qid in self._question_optionmenus:
+                if self._question_category_vars[qid].get() == subscale_name:
+                    self._apply_dropdown_color(qid, subscale_name)
 
     # ------------------------------------------------------------------ #
 

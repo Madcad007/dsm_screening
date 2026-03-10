@@ -52,6 +52,20 @@ _DEFAULT_CONFIG = {
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
 
+# Farb-Palette als Fallback für Subskalen ohne gespeicherte Farbe
+_DEFAULT_COLORS = [
+    "#5b8dd9",  # Blau
+    "#d4564f",  # Rot
+    "#6aab9c",  # Grün
+    "#e07b54",  # Orange
+    "#9b59b6",  # Lila
+    "#f39c12",  # Gelb
+    "#1abc9c",  # Türkis
+    "#e74c3c",  # Dunkelrot
+    "#3498db",  # Hellblau
+    "#2ecc71",  # Hellgrün
+]
+
 
 class ConfigManager:
     _instance = None
@@ -128,6 +142,13 @@ class ConfigManager:
 
     def get_subscales(self) -> dict:
         return self.config["subscales"]
+
+    def get_subscale_colors(self) -> dict:
+        """Gibt {subscale_name: hex_color} zurück. Fehlende → Palette-Fallback."""
+        colors = {}
+        for idx, (name, info) in enumerate(self.config["subscales"].items()):
+            colors[name] = info.get("color", _DEFAULT_COLORS[idx % len(_DEFAULT_COLORS)])
+        return colors
 
     def get_subscale_thresholds(self, subscale_name: str) -> dict:
         return self.config["subscales"][subscale_name]["thresholds"]
