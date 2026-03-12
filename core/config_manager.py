@@ -6,6 +6,7 @@ Singleton-Manager für das Lesen und Schreiben der config.json.
 import json
 import hashlib
 import os
+import sys
 import copy
 
 # Gültige Auswerter-Schlüssel (Reihenfolge wird in der UI verwendet)
@@ -50,7 +51,18 @@ _DEFAULT_CONFIG = {
     }
 }
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
+# Im gefrorenen Bundle (PyInstaller) liegt config.json neben der .exe (beschreibbar).
+# Im gefrorenen Bundle liegt config.json neben der .exe (beschreibbar).
+# Im Entwicklungsmodus liegt sie im Projektstamm neben main.py.
+if getattr(sys, "frozen", False):
+    _BASE_DIR = os.path.dirname(sys.executable)
+    # PyInstaller 6.x legt gebündelte Datendateien in _internal/ (sys._MEIPASS).
+    # Das dient als schreibgeschützte Vorlage beim ersten Start.
+    _BUNDLE_CONFIG = os.path.join(sys._MEIPASS, "config.json")
+else:
+    _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _BUNDLE_CONFIG = None
+CONFIG_PATH = os.path.join(_BASE_DIR, "config.json")
 
 # Farb-Palette als Fallback für Subskalen ohne gespeicherte Farbe
 _DEFAULT_COLORS = [
@@ -87,6 +99,19 @@ class ConfigManager:
             self._config = merged
             self._migrate_thresholds()
         except (FileNotFoundError, json.JSONDecodeError):
+            # Fallback: gebündelte Vorlage aus _internal/ (PyInstaller 6.x)
+            if _BUNDLE_CONFIG and os.path.exists(_BUNDLE_CONFIG):
+                try:
+                    with open(_BUNDLE_CONFIG, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    merged = copy.deepcopy(_DEFAULT_CONFIG)
+                    merged.update(data)
+                    self._config = merged
+                    self._migrate_thresholds()
+                    self.save()  # Schreibt in beschreibbaren Ordner neben EXE
+                    return
+                except (FileNotFoundError, json.JSONDecodeError):
+                    pass
             self._config = copy.deepcopy(_DEFAULT_CONFIG)
             self.save()
 

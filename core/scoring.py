@@ -63,7 +63,7 @@ def compute_scores(
             vals = q_vals.get(str(qid), answer_values)
             answer_index = answers.get(qid, 0)
             raw_score += vals[answer_index]
-            max_score += vals[-1]  # höchster Wert für diese Frage
+            max_score += max(vals)  # höchster Wert für diese Frage
 
         # Klassifikation
         if raw_score >= thresholds["auffaellig"]:
