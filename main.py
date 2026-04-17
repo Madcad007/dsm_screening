@@ -9,6 +9,7 @@ import datetime
 
 from core.config_manager import ConfigManager
 from core.scoring import compute_scores
+from core.pdf_blank import generate_blank_pdf
 from views.start_view import StartView
 from views.questionnaire_view import QuestionnaireView
 from views.results_view import ResultsView
@@ -42,7 +43,11 @@ class App(ctk.CTk):
         self._container.pack(fill="both", expand=True)
 
         # Views vorinitialisieren
-        self._start_view = StartView(self._container, on_start_callback=self._on_start)
+        self._start_view = StartView(
+            self._container,
+            on_start_callback=self._on_start,
+            on_print_blank_callback=self._on_print_blank,
+        )
         self._questionnaire_view = QuestionnaireView(
             self._container, on_submit_callback=self._on_submit
         )
@@ -244,6 +249,37 @@ class App(ctk.CTk):
         self._child_info = child_info or {}
         self._questionnaire_view.reload()
         self._show_view(self._questionnaire_view)
+
+    def _on_print_blank(self, child_info: dict, respondent: str):
+        """Erzeugt ein Blanko-PDF und öffnet es im Standard-PDF-Betrachter."""
+        import tempfile
+        import os
+        import tkinter.messagebox as mb
+
+        questions = self._cfg.get_questions()
+        answer_labels = self._cfg.get_answer_labels()
+        instruction = self._cfg.get_questionnaire_instruction()
+
+        try:
+            tmp = tempfile.NamedTemporaryFile(
+                suffix=".pdf", prefix="DSM_Blanko_", delete=False
+            )
+            path = tmp.name
+            tmp.close()
+            generate_blank_pdf(
+                path=path,
+                child_info=child_info,
+                respondent=respondent,
+                questions=questions,
+                answer_labels=answer_labels,
+                instruction=instruction,
+            )
+            os.startfile(path)
+        except Exception as exc:
+            mb.showerror(
+                "Blanko-PDF Fehler",
+                f"Das PDF konnte nicht erstellt werden:\n{exc}",
+            )
 
     def _on_submit(self, answers: dict):
         """Fragebogen abgeschickt → Auswertung berechnen & anzeigen"""

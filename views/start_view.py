@@ -11,13 +11,15 @@ RESPONDENT_OPTIONS = ["Mutter", "Vater", "Lehrer", "Selbst", "Sonstige"]
 
 
 class StartView(ctk.CTkFrame):
-    def __init__(self, master, on_start_callback):
+    def __init__(self, master, on_start_callback, on_print_blank_callback=None):
         """
         :param master: Das übergeordnete CTk-Fenster
         :param on_start_callback: Funktion(respondent, child_info) → wird bei Start aufgerufen
+        :param on_print_blank_callback: Funktion(child_info, respondent) → erzeugt Blanko-PDF
         """
         super().__init__(master, fg_color="transparent")
         self._on_start = on_start_callback
+        self._on_print_blank = on_print_blank_callback
         self._selected = ctk.StringVar(value="")
         self._build_ui()
 
@@ -132,7 +134,22 @@ class StartView(ctk.CTkFrame):
             state="disabled",
             command=self._on_start_clicked,
         )
-        self._start_btn.pack(pady=16)
+        self._start_btn.pack(pady=(16, 6))
+
+        # ---------- Blanko-PDF-Button ----------
+        self._print_blank_btn = ctk.CTkButton(
+            self,
+            text="🖨  Blanko-PDF drucken",
+            font=ctk.CTkFont(size=13),
+            width=220,
+            height=36,
+            fg_color="transparent",
+            border_width=1,
+            text_color=("gray20", "gray80"),
+            hover_color=("gray88", "gray25"),
+            command=self._on_print_blank_clicked,
+        )
+        self._print_blank_btn.pack(pady=(0, 16))
 
     # ------------------------------------------------------------------ #
 
@@ -162,6 +179,21 @@ class StartView(ctk.CTkFrame):
             self._start_btn.configure(state="disabled")
         if selection == "Sonstige":
             self._sonstige_entry.bind("<KeyRelease>", self._validate_form)
+
+    def _on_print_blank_clicked(self):
+        child_info = {
+            "nachname":        self._nachname_entry.get().strip(),
+            "vorname":         self._vorname_entry.get().strip(),
+            "geburtsdatum":    self._geb_entry.get().strip(),
+            "assessment_date": self._date_entry.get().strip(),
+        }
+        selection = self._selected.get()
+        if selection == "Sonstige":
+            respondent = self._sonstige_entry.get().strip() or "Sonstige"
+        else:
+            respondent = selection
+        if self._on_print_blank:
+            self._on_print_blank(child_info, respondent)
 
     def _on_start_clicked(self):
         selection = self._selected.get()

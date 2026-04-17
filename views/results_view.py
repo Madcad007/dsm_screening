@@ -275,12 +275,157 @@ class ResultsView(ctk.CTkFrame):
 
     # ------------------------------------------------------------------ #
 
+    # ---- Clipboard-Hilfsmethoden ---- #
+
+    def _build_plain_table(self) -> str:
+        """Erzeugt eine Tab-getrennte ASCII-Tabelle der Ergebnisse."""
+        results = getattr(self, "_current_results", [])
+        if not results:
+            return ""
+        sep = "-" * 52
+        lines = ["Bereich\tRohwert\tMax.\tBewertung", sep]
+        for r in results:
+            lines.append(f"{r.name}\t{r.raw_score}\t{r.max_score}\t{r.classification_label}")
+        total = sum(r.raw_score for r in results)
+        total_max = sum(r.max_score for r in results)
+        lines.append(sep)
+        lines.append(f"Gesamtsumme\t{total}\t{total_max}\t")
+        return "\n".join(lines)
+
+    def _build_html_content(self) -> str:
+        """Erzeugt ein HTML-Fragment mit Ergebnistabelle + Zusammenfassungstext."""
+        results = getattr(self, "_current_results", [])
+        summary = getattr(self, "_current_summary", "")
+
+        color_map = {
+            "unauffaellig": "#2ecc71",
+            "grenzwertig":  "#f39c12",
+            "auffaellig":   "#e74c3c",
+        }
+
+        rows_html = ""
+        for r in results:
+            color = color_map.get(r.classification_key, "#cccccc")
+            rows_html += (
+                "<tr>"
+                f"<td style='padding:4px 8px;border:1px solid #ddd;'>{r.name}</td>"
+                f"<td style='padding:4px 8px;border:1px solid #ddd;text-align:center;"
+                f"font-weight:bold;'>{r.raw_score}</td>"
+                f"<td style='padding:4px 8px;border:1px solid #ddd;text-align:center;"
+                f"color:#666;'>{r.max_score}</td>"
+                f"<td style='padding:4px 8px;border:1px solid #ddd;background:{color};"
+                f"color:white;font-weight:bold;text-align:center;'>"
+                f"{r.classification_label}</td>"
+                "</tr>"
+            )
+
+        total = sum(r.raw_score for r in results)
+        total_max = sum(r.max_score for r in results)
+        rows_html += (
+            "<tr style='border-top:2px solid #999;'>"
+            "<td style='padding:4px 8px;border:1px solid #ddd;font-weight:bold;'>Gesamtsumme</td>"
+            f"<td style='padding:4px 8px;border:1px solid #ddd;text-align:center;"
+            f"font-weight:bold;'>{total}</td>"
+            f"<td style='padding:4px 8px;border:1px solid #ddd;text-align:center;"
+            f"color:#666;'>{total_max}</td>"
+            "<td style='padding:4px 8px;border:1px solid #ddd;'></td>"
+            "</tr>"
+        )
+
+        return (
+            "<table style='border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;'>"
+            "<thead><tr style='background:#f0f0f0;'>"
+            "<th style='padding:6px 8px;border:1px solid #ddd;text-align:left;'>Bereich</th>"
+            "<th style='padding:6px 8px;border:1px solid #ddd;'>Rohwert</th>"
+            "<th style='padding:6px 8px;border:1px solid #ddd;'>Max.</th>"
+            "<th style='padding:6px 8px;border:1px solid #ddd;'>Bewertung</th>"
+            "</tr></thead>"
+            f"<tbody>{rows_html}</tbody>"
+            "</table>"
+            f"<p style='font-family:Arial,sans-serif;font-size:12px;margin-top:12px;'>{summary}</p>"
+        )
+
+    @staticmethod
+    def _build_cf_html(html_fragment: str) -> bytes:
+        """Verpackt ein HTML-Fragment im CF_HTML-Format für die Windows-Zwischenablage."""
+        html_body = (
+            "<html><body>\r\n"
+            "<!--StartFragment-->"
+            + html_fragment +
+            "<!--EndFragment-->\r\n"
+            "</body></html>"
+        )
+        header_template = (
+            "Version:0.9\r\n"
+            "StartHTML:{start_html:010d}\r\n"
+            "EndHTML:{end_html:010d}\r\n"
+            "StartFragment:{start_frag:010d}\r\n"
+            "EndFragment:{end_frag:010d}\r\n"
+        )
+        dummy_header = header_template.format(
+            start_html=0, end_html=0, start_frag=0, end_frag=0
+        )
+        header_len = len(dummy_header.encode("utf-8"))
+        full_bytes = html_body.encode("utf-8")
+
+        start_frag_marker = b"<!--StartFragment-->"
+        end_frag_marker   = b"<!--EndFragment-->"
+        start_frag = header_len + full_bytes.find(start_frag_marker) + len(start_frag_marker)
+        end_frag   = header_len + full_bytes.find(end_frag_marker)
+
+        header = header_template.format(
+            start_html=header_len,
+            end_html=header_len + len(full_bytes),
+            start_frag=start_frag,
+            end_frag=end_frag,
+        )
+        return header.encode("utf-8") + full_bytes
+
+    def _set_clipboard_with_table(self, html_fragment: str, plain_text: str):
+        """Setzt CF_HTML + CF_UNICODETEXT gleichzeitig in die Windows-Zwischenablage."""
+        import ctypes
+
+        kernel32  = ctypes.windll.kernel32
+        user32    = ctypes.windll.user32
+        GMEM_MOVEABLE  = 0x0002
+        CF_UNICODETEXT = 13
+        cf_html_id = user32.RegisterClipboardFormatW("HTML Format")
+
+        cf_html_bytes = self._build_cf_html(html_fragment)
+        plain_bytes   = (plain_text + "\0").encode("utf-16-le")
+
+        def _alloc(data: bytes) -> int:
+            handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+            ptr    = kernel32.GlobalLock(handle)
+            ctypes.memmove(ptr, data, len(data))
+            kernel32.GlobalUnlock(handle)
+            return handle
+
+        if not user32.OpenClipboard(None):
+            raise OSError("OpenClipboard fehlgeschlagen")
+
+        try:
+            user32.EmptyClipboard()
+            user32.SetClipboardData(cf_html_id,    _alloc(cf_html_bytes))
+            user32.SetClipboardData(CF_UNICODETEXT, _alloc(plain_bytes))
+        finally:
+            user32.CloseClipboard()
+
+    # ---- Kopieren-Schaltfläche ---- #
+
     def _copy_to_clipboard(self, auto: bool = False):
-        text = getattr(self, "_current_summary", "")
-        if not text:
+        summary = getattr(self, "_current_summary", "")
+        if not summary:
             return
-        self.clipboard_clear()
-        self.clipboard_append(text)
+        plain_table = self._build_plain_table()
+        plain_text  = (plain_table + "\n\n" + summary) if plain_table else summary
+        html_fragment = self._build_html_content()
+        try:
+            self._set_clipboard_with_table(html_fragment, plain_text)
+        except Exception:
+            # Fallback: nur Text
+            self.clipboard_clear()
+            self.clipboard_append(plain_text)
         hint = "✓ Automatisch in die Zwischenablage kopiert" if auto else "✓ In die Zwischenablage kopiert"
         self._copy_hint.configure(text=hint)
         # Hinweis nach 4 Sekunden ausblenden
